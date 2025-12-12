@@ -43,11 +43,16 @@ export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSy
         setCadError(null);
 
         try {
-            // Short delay to ensure SVG renders in hidden DOM
-            await new Promise(r => setTimeout(r, 500)); 
+            // Robust retry mechanism to get SVG
+            let svgElement = document.getElementById('concept-plan-svg');
+            let attempts = 0;
+            while (!svgElement && attempts < 10) {
+                 await new Promise(r => setTimeout(r, 200));
+                 svgElement = document.getElementById('concept-plan-svg');
+                 attempts++;
+            }
 
-            const svgElement = document.getElementById('concept-plan-svg');
-            if (!svgElement) throw new Error("Internal schematic missing.");
+            if (!svgElement) throw new Error("Internal schematic could not be captured.");
 
             // Capture SVG to Base64
             const serializer = new XMLSerializer();

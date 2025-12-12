@@ -27,8 +27,9 @@ export const analyzeFloorPlan = async (
 ): Promise<DesignResponse> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Upgraded to Gemini 3 Pro for advanced spatial reasoning
-  const modelId = "gemini-3-pro-preview"; 
+  // OPTIMIZATION: Using Flash for faster JSON/Text analysis. 
+  // It handles multimodal inputs efficiently.
+  const modelId = "gemini-2.5-flash"; 
 
   const prompt = `
     Analyze this architectural floor plan image. 
@@ -157,8 +158,9 @@ export const generateArchitecturalConcept = async (
 ): Promise<ConceptResponse> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Upgraded to Gemini 3 Pro for superior complex schema adherence and logical planning
-  const modelId = "gemini-3-pro-preview";
+  // OPTIMIZATION: Using Flash for faster Generation.
+  // Gemini 2.5 Flash is highly capable of following JSON schemas and is much faster than 3 Pro Preview.
+  const modelId = "gemini-2.5-flash";
 
   const prompt = `
     Create a professional architectural concept plan (Ground Floor) for a residential plot.
@@ -315,6 +317,7 @@ export const generateCadDrawing = async (
     schematicBase64: string,
 ): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Use Gemini 3 Pro Image (Nano Banana Pro 3) for high-quality generation
     const modelId = "gemini-3-pro-image-preview";
 
     const prompt = `

@@ -31,7 +31,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ mode }) => {
     // Rotation speed at 800ms for responsiveness
     const interval = setInterval(() => {
       setStage((prev) => (prev + 1) % currentStages.length);
-    }, 800);
+    }, 1500); // Slowed down slightly to be more readable
     return () => clearInterval(interval);
   }, [currentStages]);
 
@@ -52,6 +52,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ mode }) => {
       </h2>
       <p className="text-sm text-gray-500 font-mono min-h-[1.5rem] transition-all duration-300">
         {currentStages[stage]}
+      </p>
+      <p className="text-xs text-gray-400 mt-4 animate-pulse">
+        This process may take up to 20 seconds...
       </p>
     </div>
   );

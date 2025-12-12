@@ -84,92 +84,96 @@ export const ConceptVisualizer: React.FC<ConceptVisualizerProps> = ({ data }) =>
       const w = toPx(room.position_on_plot.x_end_m - room.position_on_plot.x_start_m);
       const h = toPx(room.position_on_plot.y_end_m - room.position_on_plot.y_start_m);
 
-      // Doors
-      room.features.doors.forEach((door, dIdx) => {
-          let dx = 0, dy = 0, rotation = 0;
-          const doorSizeM = door.type === 'double' ? 1.6 : door.type === 'opening' ? 1.8 : 0.9;
-          const doorPx = toPx(doorSizeM);
-          
-          // Ensure valid offset
-          const safeOffset = Math.max(0.2, Math.min(0.8, door.offset_ratio));
+      // Doors - robust check
+      if (room.features?.doors) {
+        room.features.doors.forEach((door, dIdx) => {
+            let dx = 0, dy = 0, rotation = 0;
+            const doorSizeM = door.type === 'double' ? 1.6 : door.type === 'opening' ? 1.8 : 0.9;
+            const doorPx = toPx(doorSizeM);
+            
+            // Ensure valid offset
+            const safeOffset = Math.max(0.2, Math.min(0.8, door.offset_ratio));
 
-          if (door.wall === 'north') { dx = x + w * safeOffset; dy = y; rotation = 0; }
-          else if (door.wall === 'south') { dx = x + w * safeOffset; dy = y + h; rotation = 180; }
-          else if (door.wall === 'west') { dx = x; dy = y + h * safeOffset; rotation = 90; }
-          else if (door.wall === 'east') { dx = x + w; dy = y + h * safeOffset; rotation = -90; }
+            if (door.wall === 'north') { dx = x + w * safeOffset; dy = y; rotation = 0; }
+            else if (door.wall === 'south') { dx = x + w * safeOffset; dy = y + h; rotation = 180; }
+            else if (door.wall === 'west') { dx = x; dy = y + h * safeOffset; rotation = 90; }
+            else if (door.wall === 'east') { dx = x + w; dy = y + h * safeOffset; rotation = -90; }
 
-          // The Cut (White line wider than wall thickness)
-          wallCuts.push(
-              <line 
-                key={`d-cut-${rIdx}-${dIdx}`}
-                x1={-doorPx/2} y1={0} x2={doorPx/2} y2={0}
-                stroke="white" strokeWidth={wallThickness + 2}
-                transform={`translate(${dx}, ${dy}) rotate(${rotation})`}
-              />
-          );
-
-          // The Symbol
-          let symbol;
-          if (door.type === 'opening') {
-              symbol = <g />;
-          } else if (door.type === 'sliding') {
-             symbol = (
-                <g transform={`translate(${dx}, ${dy}) rotate(${rotation})`}>
-                    <line x1={-doorPx/2} y1={-4} x2={0} y2={-4} stroke="black" strokeWidth="2" />
-                    <line x1={0} y1={4} x2={doorPx/2} y2={4} stroke="black" strokeWidth="2" />
-                    <line x1={-doorPx/2} y1={0} x2={doorPx/2} y2={0} stroke="black" strokeWidth="1" strokeDasharray="2,2"/>
-                </g>
+            // The Cut (White line wider than wall thickness)
+            wallCuts.push(
+                <line 
+                  key={`d-cut-${rIdx}-${dIdx}`}
+                  x1={-doorPx/2} y1={0} x2={doorPx/2} y2={0}
+                  stroke="white" strokeWidth={wallThickness + 2}
+                  transform={`translate(${dx}, ${dy}) rotate(${rotation})`}
+                />
             );
-          } else if (door.type === 'double') {
-             symbol = (
-                <g transform={`translate(${dx}, ${dy}) rotate(${rotation})`}>
-                     <path d={`M ${-doorPx/2} 0 Q ${-doorPx/2} ${doorPx/2} 0 ${doorPx/2}`} fill="none" stroke="black" strokeWidth="1" />
-                     <line x1={-doorPx/2} y1={0} x2={-doorPx/2} y2={doorPx/2} stroke="black" strokeWidth="2" />
-                     <path d={`M ${doorPx/2} 0 Q ${doorPx/2} ${doorPx/2} 0 ${doorPx/2}`} fill="none" stroke="black" strokeWidth="1" />
-                     <line x1={doorPx/2} y1={0} x2={doorPx/2} y2={doorPx/2} stroke="black" strokeWidth="2" />
-                </g>
-             );
-          } else {
-             // Single Swing
-             symbol = (
-                <g transform={`translate(${dx}, ${dy}) rotate(${rotation})`}>
-                    {/* Quarter circle arc for swing */}
-                    <path d={`M ${-doorPx/2} 0 Q ${-doorPx/2} ${doorPx} ${doorPx/2} ${doorPx}`} fill="none" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
-                    <line x1={-doorPx/2} y1={0} x2={-doorPx/2} y2={doorPx} stroke="black" strokeWidth="2" />
-                </g>
+
+            // The Symbol
+            let symbol;
+            if (door.type === 'opening') {
+                symbol = <g />;
+            } else if (door.type === 'sliding') {
+              symbol = (
+                  <g transform={`translate(${dx}, ${dy}) rotate(${rotation})`}>
+                      <line x1={-doorPx/2} y1={-4} x2={0} y2={-4} stroke="black" strokeWidth="2" />
+                      <line x1={0} y1={4} x2={doorPx/2} y2={4} stroke="black" strokeWidth="2" />
+                      <line x1={-doorPx/2} y1={0} x2={doorPx/2} y2={0} stroke="black" strokeWidth="1" strokeDasharray="2,2"/>
+                  </g>
+              );
+            } else if (door.type === 'double') {
+              symbol = (
+                  <g transform={`translate(${dx}, ${dy}) rotate(${rotation})`}>
+                      <path d={`M ${-doorPx/2} 0 Q ${-doorPx/2} ${doorPx/2} 0 ${doorPx/2}`} fill="none" stroke="black" strokeWidth="1" />
+                      <line x1={-doorPx/2} y1={0} x2={-doorPx/2} y2={doorPx/2} stroke="black" strokeWidth="2" />
+                      <path d={`M ${doorPx/2} 0 Q ${doorPx/2} ${doorPx/2} 0 ${doorPx/2}`} fill="none" stroke="black" strokeWidth="1" />
+                      <line x1={doorPx/2} y1={0} x2={doorPx/2} y2={doorPx/2} stroke="black" strokeWidth="2" />
+                  </g>
+              );
+            } else {
+              // Single Swing
+              symbol = (
+                  <g transform={`translate(${dx}, ${dy}) rotate(${rotation})`}>
+                      {/* Quarter circle arc for swing */}
+                      <path d={`M ${-doorPx/2} 0 Q ${-doorPx/2} ${doorPx} ${doorPx/2} ${doorPx}`} fill="none" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                      <line x1={-doorPx/2} y1={0} x2={-doorPx/2} y2={doorPx} stroke="black" strokeWidth="2" />
+                  </g>
+              );
+            }
+            fixtureSymbols.push(<g key={`d-sym-${rIdx}-${dIdx}`}>{symbol}</g>);
+        });
+      }
+
+      // Windows - robust check
+      if (room.features?.windows) {
+        room.features.windows.forEach((win, wIdx) => {
+            let wx = 0, wy = 0, rotation = 0;
+            const widthPx = toPx(win.width_m);
+
+            if (win.wall === 'north') { wx = x + w * win.offset_ratio; wy = y; rotation = 0; }
+            else if (win.wall === 'south') { wx = x + w * win.offset_ratio; wy = y + h; rotation = 0; }
+            else if (win.wall === 'west') { wx = x; wy = y + h * win.offset_ratio; rotation = 90; }
+            else if (win.wall === 'east') { wx = x + w; wy = y + h * win.offset_ratio; rotation = 90; }
+
+            // Window Cut
+            wallCuts.push(
+                <line 
+                  key={`w-cut-${rIdx}-${wIdx}`}
+                  x1={-widthPx/2} y1={0} x2={widthPx/2} y2={0}
+                  stroke="white" strokeWidth={wallThickness + 2}
+                  transform={`translate(${wx}, ${wy}) rotate(${rotation})`}
+                />
             );
-          }
-          fixtureSymbols.push(<g key={`d-sym-${rIdx}-${dIdx}`}>{symbol}</g>);
-      });
 
-      // Windows
-      room.features.windows.forEach((win, wIdx) => {
-          let wx = 0, wy = 0, rotation = 0;
-          const widthPx = toPx(win.width_m);
-
-          if (win.wall === 'north') { wx = x + w * win.offset_ratio; wy = y; rotation = 0; }
-          else if (win.wall === 'south') { wx = x + w * win.offset_ratio; wy = y + h; rotation = 0; }
-          else if (win.wall === 'west') { wx = x; wy = y + h * win.offset_ratio; rotation = 90; }
-          else if (win.wall === 'east') { wx = x + w; wy = y + h * win.offset_ratio; rotation = 90; }
-
-          // Window Cut
-          wallCuts.push(
-               <line 
-                key={`w-cut-${rIdx}-${wIdx}`}
-                x1={-widthPx/2} y1={0} x2={widthPx/2} y2={0}
-                stroke="white" strokeWidth={wallThickness + 2}
-                transform={`translate(${wx}, ${wy}) rotate(${rotation})`}
-              />
-          );
-
-          // Window Symbol
-          fixtureSymbols.push(
-            <g key={`w-sym-${rIdx}-${wIdx}`} transform={`translate(${wx}, ${wy}) rotate(${rotation})`}>
-                <rect x={-widthPx/2} y={-wallThickness/2} width={widthPx} height={wallThickness} stroke="black" strokeWidth="1" fill="none" />
-                <line x1={-widthPx/2} y1={0} x2={widthPx/2} y2={0} stroke="black" strokeWidth="1" />
-            </g>
-          );
-      });
+            // Window Symbol
+            fixtureSymbols.push(
+              <g key={`w-sym-${rIdx}-${wIdx}`} transform={`translate(${wx}, ${wy}) rotate(${rotation})`}>
+                  <rect x={-widthPx/2} y={-wallThickness/2} width={widthPx} height={wallThickness} stroke="black" strokeWidth="1" fill="none" />
+                  <line x1={-widthPx/2} y1={0} x2={widthPx/2} y2={0} stroke="black" strokeWidth="1" />
+              </g>
+            );
+        });
+      }
   });
 
   // 4. Labels (Top Layer)
