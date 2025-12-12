@@ -1,0 +1,125 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ArchiCraft — AI-Powered Architectural & Interior Design Concepts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Merriweather', 'serif'],
+              mono: ['Fira Code', 'monospace'],
+            },
+            colors: {
+              arch: {
+                50: '#f9fafb',
+                100: '#f3f4f6',
+                500: '#6b7280',
+                800: '#1f2937',
+                900: '#111827',
+              },
+              accent: {
+                light: '#fdba74',
+                DEFAULT: '#f97316',
+                dark: '#c2410c',
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Merriweather:wght@300;700&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f9fafb;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+
+      /* --- PROFESSIONAL PRINT STYLES --- */
+      @media print {
+        @page {
+          margin: 10mm;
+          size: A4;
+        }
+
+        body {
+          background-color: white;
+          color: black;
+          font-size: 12pt;
+        }
+
+        /* Hide UI Elements */
+        header, footer, button, .no-print, nav, .info-modal-backdrop {
+          display: none !important;
+        }
+
+        /* Force Background Graphics (colors/images) to print */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* Layout Adjustments */
+        .print-only {
+          display: block !important;
+        }
+        
+        .screen-only {
+          display: none !important;
+        }
+
+        /* Ensure Grids Work */
+        .print-grid {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr !important;
+          gap: 20px !important;
+        }
+
+        /* Break Pages Cleanly */
+        .page-break {
+          page-break-before: always;
+        }
+        
+        .avoid-break {
+          page-break-inside: avoid;
+        }
+
+        /* Typography */
+        h1 { font-size: 24pt !important; color: #111827 !important; }
+        h2 { font-size: 18pt !important; color: #111827 !important; border-bottom: 2px solid #eee; margin-bottom: 10px; }
+        h3 { font-size: 14pt !important; color: #374151 !important; margin-top: 15px; }
+        p { line-height: 1.5; color: #4b5563 !important; }
+      }
+
+      /* Hide print elements on screen */
+      .print-only {
+        display: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
