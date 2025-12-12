@@ -54,4 +54,4 @@ To run this project locally:
     ```
 
 ## Hackathon Context
-This project was built for the Google AI Hackathon to demonstrate the practical application of Multimodal LLMs in the AEC (Architecture, Engineering, and Construction) industry. It showcases how generative models can move beyond text chat to produce structured, visual, and spatial data.
+This project was built for **Google DeepMind - Vibe Code with Gemini 3 Pro in AI Studio**. It demonstrates the practical application of Multimodal LLMs in the AEC (Architecture, Engineering, and Construction) industry, showcasing how generative models can move beyond text chat to produce structured, visual, and spatial data.
