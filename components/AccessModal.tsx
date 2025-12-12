@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { checkAccessCode, setSessionUnlocked } from '../utils/accessControl';
 
@@ -71,7 +70,7 @@ export const AccessModal: React.FC<AccessModalProps> = ({ isOpen, onSuccess, onC
                 type="password"
                 value={code}
                 onChange={(e) => { setCode(e.target.value); setError(false); }}
-                placeholder="Enter code here..."
+                placeholder="Enter access code..."
                 className={`w-full p-4 bg-gray-50 border rounded-xl focus:ring-2 focus:outline-none transition-all text-lg tracking-widest ${error ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-accent/20'}`}
                 autoFocus
               />

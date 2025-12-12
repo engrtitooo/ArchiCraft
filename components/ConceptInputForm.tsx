@@ -167,7 +167,7 @@ export const ConceptInputForm: React.FC<ConceptInputFormProps> = ({
             onClick={onSubmit}
             className="w-full bg-arch-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black hover:shadow-lg transform transition-all active:scale-[0.99]"
         >
-            Generate Architectural Concept
+            Generate Architectural Floor Plan
         </button>
       </div>
     </div>

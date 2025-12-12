@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ConceptResponse, ConceptRoom, ArchDoor, ArchWindow } from '../../types';
 
@@ -192,14 +193,15 @@ export const ConceptVisualizer: React.FC<ConceptVisualizerProps> = ({ data }) =>
   });
 
   return (
-    <div className="overflow-x-auto flex justify-center bg-gray-50 p-6 rounded-xl border border-gray-200 print:bg-white print:border-0">
-      <div className="bg-white shadow-2xl p-8 rounded-sm print:shadow-none">
+    <div className="overflow-x-auto flex justify-center bg-white p-0 rounded-none border-0">
+      <div className="bg-white p-0 rounded-none">
         <svg 
             id="concept-plan-svg"
             width={svgWidth} 
             height={svgHeight} 
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             className="max-w-full h-auto"
+            style={{ backgroundColor: 'white' }}
         >
             <defs>
                 <pattern id="grid" width={toPx(1)} height={toPx(1)} patternUnits="userSpaceOnUse">
@@ -210,8 +212,10 @@ export const ConceptVisualizer: React.FC<ConceptVisualizerProps> = ({ data }) =>
                 </pattern>
             </defs>
 
-            {/* Plot Background */}
-            <rect x={0} y={0} width={svgWidth} height={svgHeight} fill="#f9fafb" />
+            {/* Plot Background - Explicit White */}
+            <rect x={0} y={0} width={svgWidth} height={svgHeight} fill="white" />
+            
+            {/* Grid Area */}
             <rect x={paddingMeters * scale} y={paddingMeters * scale} width={plotWidth * scale} height={plotDepth * scale} fill="url(#grid)" />
             
             {/* Plot Boundary Line */}

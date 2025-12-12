@@ -114,6 +114,43 @@ export const analyzeFloorPlan = async (
   }
 };
 
+// Internal Validation Logic (Step 2 of the process)
+const validateLayout = (data: ConceptResponse): ConceptResponse => {
+    // Simple consistency checks to satisfy "Internal Validation Pass"
+    // 1. Ensure rooms have valid dimensions
+    data.rooms = data.rooms.map(room => {
+        if (!room.position_on_plot) return room;
+        
+        // Fix any negative dimensions
+        if (room.position_on_plot.x_end_m < room.position_on_plot.x_start_m) {
+            const temp = room.position_on_plot.x_end_m;
+            room.position_on_plot.x_end_m = room.position_on_plot.x_start_m;
+            room.position_on_plot.x_start_m = temp;
+        }
+        if (room.position_on_plot.y_end_m < room.position_on_plot.y_start_m) {
+            const temp = room.position_on_plot.y_end_m;
+            room.position_on_plot.y_end_m = room.position_on_plot.y_start_m;
+            room.position_on_plot.y_start_m = temp;
+        }
+        return room;
+    });
+
+    // 2. Ensure every room has at least one door (except perhaps purely open zones)
+    // If a room has no doors, add a default opening
+    data.rooms.forEach(room => {
+        if (!room.features.doors || room.features.doors.length === 0) {
+            // Auto-fix: Add a door on the first available wall
+            room.features.doors = [{
+                wall: 'north',
+                offset_ratio: 0.5,
+                type: 'opening'
+            }];
+        }
+    });
+
+    return data;
+};
+
 export const generateArchitecturalConcept = async (
   inputs: ConceptInputData,
   unitSystem: UnitSystem
@@ -263,7 +300,7 @@ export const generateArchitecturalConcept = async (
     if (response.text) {
       const data = JSON.parse(response.text) as ConceptResponse;
       data.unit_system = unitSystem;
-      return data;
+      return validateLayout(data); // Step 2: Internal Validation
     } else {
       throw new Error("No JSON response for Concept Plan.");
     }
@@ -272,6 +309,54 @@ export const generateArchitecturalConcept = async (
     throw error;
   }
 };
+
+// Step 3: Nano Banana Pro 3 Floor Plan Drawing
+export const generateCadDrawing = async (
+    schematicBase64: string,
+): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const modelId = "gemini-3-pro-image-preview";
+
+    const prompt = `
+        Convert this schematic layout into a Professional Architectural Floor Plan Drawing (CAD Style).
+        
+        Style Requirements:
+        - White background.
+        - High contrast black lines for walls.
+        - Clean, precise drafting quality.
+        - Show door swing arcs clearly.
+        - Show windows on exterior walls.
+        - Include room labels (Name + Dimensions).
+        - 2D Top-down view only.
+        - NO 3D perspective.
+        - NO colored textures.
+        - NO furniture (keep it strictly architectural/structural).
+        
+        The output must be a clean line drawing suitable for a construction permit application.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: modelId,
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: "image/png", data: schematicBase64 } },
+                    { text: prompt }
+                ]
+            }
+        });
+
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+            if (part.inlineData && part.inlineData.data) {
+                return part.inlineData.data;
+            }
+        }
+        throw new Error("No CAD image generated.");
+    } catch (error) {
+        console.error("CAD Drawing Failed:", error);
+        throw error;
+    }
+}
 
 export const generateInteriorPreview = async (
   schematicBase64: string,

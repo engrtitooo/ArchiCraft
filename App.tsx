@@ -205,7 +205,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
-      <Header onNavigate={setActiveModal} />
+      <Header onNavigate={setActiveModal} onLogoClick={handleReset} />
 
       <InfoModal type={activeModal} onClose={() => setActiveModal(null)} />
 
