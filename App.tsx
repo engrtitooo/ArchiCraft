@@ -183,7 +183,7 @@ const App: React.FC = () => {
                  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-left animate-fade-in-up">
                     <h3 className="font-bold text-gray-900 mb-2">Requires Gemini API Key</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        To generate professional renders using <strong>Nano Banana Pro 3</strong>, you must connect a Google Cloud Project with billing enabled.
+                        To generate professional renders using <strong>Gemini 3 Pro Image</strong>, you must connect a Google Cloud Project with billing enabled.
                     </p>
                     <button 
                         onClick={handleSelectKey}

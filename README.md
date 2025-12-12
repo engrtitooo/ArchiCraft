@@ -7,6 +7,11 @@ ArchiCraft is a web-based platform that leverages multimodal generative AI to ac
 ## Live Demo
 **URL**: https://archicraft-250712192556.us-west1.run.app
 
+## Judge Access / Unlock Codes
+To prevent API quota abuse during the public viewing period, the **"Visualize Interiors" (High-Res Rendering)** feature is gated behind an access code. 
+
+**Judges:** Please use the access codes provided in the official hackathon submission details/notes to unlock full functionality.
+
 ## Key Features
 *   **Floor Plan Analysis**: Uploads 2D floor plans to identifying distinct rooms, approximate dimensions, and spatial flow.
 *   **Interior Concept Generation**: Automatically suggests furniture layouts, color palettes, and material finishes based on user-selected styles (e.g., Modern, Scandinavian, Industrial).
@@ -22,13 +27,13 @@ ArchiCraft is a web-based platform that leverages multimodal generative AI to ac
 *   **Hosting**: Google Cloud Run
 
 ## AI & Google Gemini Usage
-This project was built using **Google AI Studio** to orchestrate multimodal workflows.
+This project was built using **Google AI Studio** to orchestrate multimodal workflows, utilizing **Gemini 3 Pro** exclusively across all features.
 
 *   **Gemini 3 Pro Image (Nano Banana Pro 3)**:
     Used for the "Visualize Interiors" feature. The application rasterizes the generated SVG schematic and prompts the Gemini 3 vision model to "texture" the floor plan, adding realistic lighting, flooring, and furniture while respecting the structural boundaries defined by the code.
 
-*   **Gemini 2.5 Flash**:
-    Utilized for the core architectural reasoning engine. Flash was selected for the `analyzeFloorPlan` and `generateArchitecturalConcept` functions due to its low latency and superior adherence to complex JSON schemas, which is critical for rendering accurate coordinate-based drawings on the frontend.
+*   **Gemini 3 Pro Preview**:
+    Utilized for the core architectural reasoning engine. Gemini 3 Pro was selected for the `analyzeFloorPlan` and `generateArchitecturalConcept` functions due to its advanced reasoning capabilities for complex spatial planning and superior adherence to technical JSON schemas, which is critical for rendering accurate coordinate-based drawings on the frontend.
 
 ## Project Scope & Limitations
 ArchiCraft is a conceptual design tool intended for ideation and exploration.

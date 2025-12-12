@@ -27,8 +27,8 @@ export const analyzeFloorPlan = async (
 ): Promise<DesignResponse> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Using Gemini 2.5 Flash for faster analysis while maintaining good vision capabilities
-  const modelId = "gemini-2.5-flash"; 
+  // Upgraded to Gemini 3 Pro for advanced spatial reasoning
+  const modelId = "gemini-3-pro-preview"; 
 
   const prompt = `
     Analyze this architectural floor plan image. 
@@ -54,7 +54,7 @@ export const analyzeFloorPlan = async (
       },
       config: {
         systemInstruction: SYSTEM_INSTRUCTION_A,
-        temperature: 0.2, // Lower temperature for more stable JSON
+        temperature: 0.2,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -120,9 +120,8 @@ export const generateArchitecturalConcept = async (
 ): Promise<ConceptResponse> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // SWITCHED BACK TO FLASH: Flash is more robust for strict JSON schemas and less prone 
-  // to the 60k+ character infinite loop bug than the experimental Pro Preview models.
-  const modelId = "gemini-2.5-flash";
+  // Upgraded to Gemini 3 Pro for superior complex schema adherence and logical planning
+  const modelId = "gemini-3-pro-preview";
 
   const prompt = `
     Create a professional architectural concept plan (Ground Floor) for a residential plot.

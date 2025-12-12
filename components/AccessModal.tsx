@@ -53,6 +53,9 @@ export const AccessModal: React.FC<AccessModalProps> = ({ isOpen, onSuccess, onC
             <p className="text-gray-500 mt-2 text-sm">
               Please enter your Judge or Developer access code to unlock the high-definition rendering engine.
             </p>
+            <p className="text-accent text-xs font-bold mt-2 bg-accent/10 py-1 px-2 rounded inline-block">
+               Judges: Please check the submission details for codes.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -62,7 +65,7 @@ export const AccessModal: React.FC<AccessModalProps> = ({ isOpen, onSuccess, onC
                 type="password" // Password type masks the input
                 value={code}
                 onChange={(e) => { setCode(e.target.value); setError(false); }}
-                placeholder="Enter code (e.g. JUDGE-PASS-01)"
+                placeholder="Enter access code..."
                 className={`w-full p-4 bg-gray-50 border rounded-xl focus:ring-2 focus:outline-none transition-all text-lg tracking-widest ${error ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-accent/20'}`}
                 autoFocus
               />

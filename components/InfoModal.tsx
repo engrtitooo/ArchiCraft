@@ -91,7 +91,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, onClose }) => {
                             </div>
                             <h4 className="text-xl font-bold text-gray-900 mb-3">Neural Rendering</h4>
                             <p className="text-gray-600 text-sm leading-relaxed">
-                                The <strong>Nano Banana Pro 3</strong> diffusion model generates the final raster. It maintains architectural fidelity (walls don't move) while hallucinating photorealistic details.
+                                The <strong>Gemini 3 Pro Image</strong> diffusion model generates the final raster. It maintains architectural fidelity (walls don't move) while hallucinating photorealistic details.
                             </p>
                              <ul className="mt-4 space-y-2 text-sm text-gray-500">
                                 <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>1024x1024 High-Res Output</li>
@@ -262,7 +262,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, onClose }) => {
                         <ul className="space-y-4 text-sm text-gray-300 mb-8">
                             <li className="flex gap-3 items-center">
                                 <div className="bg-accent/20 p-1 rounded-full"><svg className="w-3 h-3 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
-                                <span><strong>Nano Banana Pro 3</strong> Generation</span>
+                                <span><strong>Gemini 3 Pro Image</strong> Generation</span>
                             </li>
                             <li className="flex gap-3 items-center">
                                 <div className="bg-accent/20 p-1 rounded-full"><svg className="w-3 h-3 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>

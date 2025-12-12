@@ -154,7 +154,7 @@ export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSy
                     <div className="border-t border-gray-200 pt-6">
                         <h3 className="font-serif font-bold text-gray-900 mb-2">Visualize Interiors</h3>
                         <p className="text-xs text-gray-500 mb-4">
-                            Use "Nano Banana Pro 3" to turn this schematic into a fully furnished, realistic floor plan.
+                            Use "Gemini 3 Pro Image" to turn this schematic into a fully furnished, realistic floor plan.
                         </p>
                         <button
                             onClick={handleVisualizeClick}
@@ -177,7 +177,7 @@ export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSy
                         {imageError === "PERMISSION_DENIED" ? (
                             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-center">
                                 <p className="text-xs text-red-600 mb-2 font-medium">Access Denied: Paid API Key Required</p>
-                                <p className="text-xs text-gray-600 mb-3">The model "Nano Banana Pro 3" requires a Google Cloud project with billing enabled.</p>
+                                <p className="text-xs text-gray-600 mb-3">The model "Gemini 3 Pro Image" requires a Google Cloud project with billing enabled.</p>
                                 <button onClick={onChangeKey} className="text-xs bg-white border border-gray-300 px-3 py-1 rounded shadow-sm hover:bg-gray-50 text-gray-700">
                                     Switch API Key
                                 </button>
