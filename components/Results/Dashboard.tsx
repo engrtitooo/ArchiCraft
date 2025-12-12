@@ -259,18 +259,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onRes
             </div>
         </div>
 
-        {/* Print Image Grid */}
-        <div className="print-grid mb-8">
-             <div className="avoid-break">
+        {/* Print Image Grid - Uses explicit style for print reliability */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+             <div className="avoid-break" style={{ pageBreakInside: 'avoid' }}>
                  <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Original Floor Plan</h3>
-                 <div className="border border-gray-300 p-2">
+                 <div className="border border-gray-300 p-2 bg-white">
                      <img src={originalImage} className="w-full h-auto object-contain max-h-[400px]" alt="Original Plan" />
                  </div>
              </div>
              {generatedImage && (
-                 <div className="avoid-break">
+                 <div className="avoid-break" style={{ pageBreakInside: 'avoid' }}>
                     <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">AI-Generated Concept</h3>
-                     <div className="border border-gray-300 p-2">
+                     <div className="border border-gray-300 p-2 bg-white">
                         <img src={generatedImage} className="w-full h-auto object-contain max-h-[400px]" alt="Render" />
                      </div>
                  </div>
@@ -278,7 +278,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onRes
         </div>
 
         {/* Print Executive Summary */}
-        <div className="mb-8 p-6 bg-gray-50 border border-gray-200 avoid-break">
+        <div className="mb-8 p-6 bg-gray-50 border border-gray-200 avoid-break" style={{ pageBreakInside: 'avoid' }}>
             <h3 className="text-lg font-bold border-b border-gray-300 pb-2 mb-4">Architectural Summary</h3>
             <p className="text-sm text-gray-700 mb-4">{data.architectural_summary}</p>
             
@@ -288,24 +288,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onRes
 
         <div className="page-break"></div>
 
-        {/* Print Room Details */}
+        {/* Print Room Details - 2 Column Grid for better space usage */}
         <h3 className="text-2xl font-bold mb-6">Detailed Room Specifications</h3>
-        <div className="grid grid-cols-1 gap-6">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             {data.rooms.map((room, idx) => (
-                <div key={idx} className="border border-gray-300 rounded p-4 avoid-break">
+                <div key={idx} className="border border-gray-300 rounded p-4 avoid-break bg-white" style={{ pageBreakInside: 'avoid' }}>
                     <div className="flex justify-between border-b border-gray-100 pb-2 mb-3">
                         <span className="font-bold text-lg">{room.room_type}</span>
                         <span className="text-gray-500 text-sm">{room.dimensions_estimate}</span>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
                         <div>
-                             <p className="text-sm text-gray-600 mb-2"><strong>Concept:</strong> {room.design_concept}</p>
-                             <p className="text-sm text-gray-600 mb-2"><strong>Flooring:</strong> {room.flooring_suggestion}</p>
+                             <p className="text-sm text-gray-600 mb-1"><strong>Concept:</strong> {room.design_concept}</p>
+                             <p className="text-sm text-gray-600 mb-1"><strong>Flooring:</strong> {room.flooring_suggestion}</p>
                              <p className="text-sm text-gray-600"><strong>Lighting:</strong> {room.lighting_suggestion}</p>
                         </div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-700 mb-1">Furniture:</p>
+                        <div className="border-t border-gray-100 pt-2">
+                            <p className="text-sm font-bold text-gray-700 mb-1">Furniture Layout:</p>
                             <ul className="list-disc pl-4 text-sm text-gray-600 mb-2">
                                 {room.furniture_layout.map((f, i) => (
                                     <li key={i}>{f.name} <span className="text-gray-400 text-xs">({f.placement_reasoning})</span></li>
@@ -313,7 +313,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onRes
                             </ul>
                             <div className="flex gap-2 mt-2">
                                 {room.color_palette.map((c, i) => (
-                                    <span key={i} className="inline-block w-6 h-6 rounded-full border border-gray-200" style={{backgroundColor: c}}></span>
+                                    <span key={i} className="inline-block w-6 h-6 rounded-full border border-gray-200 print-color-exact" style={{backgroundColor: c, printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact'}}></span>
                                 ))}
                             </div>
                         </div>
