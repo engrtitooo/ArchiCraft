@@ -356,7 +356,7 @@ const App: React.FC = () => {
       
       <footer className="bg-white border-t border-gray-100 py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
-            <p className="text-sm text-gray-400">Powered by Gemini 3 Pro • Built for Google AI Hackathon</p>
+            <p className="text-sm text-gray-400">Powered by Gemini 3 Pro • Built for Google DeepMind Hackathon</p>
         </div>
       </footer>
     </div>
