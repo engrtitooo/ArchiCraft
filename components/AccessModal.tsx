@@ -53,19 +53,25 @@ export const AccessModal: React.FC<AccessModalProps> = ({ isOpen, onSuccess, onC
             <p className="text-gray-500 mt-2 text-sm">
               Please enter your Judge or Developer access code to unlock the high-definition rendering engine.
             </p>
-            <p className="text-accent text-xs font-bold mt-2 bg-accent/10 py-1 px-2 rounded inline-block">
-               Judges: Please check the submission details for codes.
-            </p>
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+              <p className="text-blue-800 text-xs font-bold flex items-center justify-center gap-1">
+                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                 Judges & Reviewers
+              </p>
+              <p className="text-blue-600 text-xs mt-1">
+                Please check the official submission notes/details for your access code.
+              </p>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Access Code</label>
               <input 
-                type="password" // Password type masks the input
+                type="password"
                 value={code}
                 onChange={(e) => { setCode(e.target.value); setError(false); }}
-                placeholder="Enter access code..."
+                placeholder="Enter code here..."
                 className={`w-full p-4 bg-gray-50 border rounded-xl focus:ring-2 focus:outline-none transition-all text-lg tracking-widest ${error ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-accent/20'}`}
                 autoFocus
               />
