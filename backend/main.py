@@ -123,19 +123,20 @@ async def logout(response: Response):
     )
     return {"message": "Logged out"}
 
-# Mount the React frontend
+# Serve static assets and SPA index.html
 frontend_dist = os.path.join(os.path.dirname(__file__), "../dist")
-if os.path.exists(frontend_dist):
-    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
 
-@app.exception_handler(404)
-async def not_found_handler(request: Request, exc: HTTPException):
-    # Pass through 404s for API routes
-    if request.url.path.startswith("/api/"):
-        return Response(content="Not Found", status_code=404)
-    # Serve index.html for client-side routing
-    index_path = os.path.join(frontend_dist, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return Response(content="Frontend not built", status_code=404)
+if os.path.exists(frontend_dist):
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(request: Request, full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="API route not found")
+        file_path = os.path.join(frontend_dist, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
 

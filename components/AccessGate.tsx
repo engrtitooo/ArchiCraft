@@ -35,7 +35,8 @@ export const AccessGate: React.FC<AccessGateProps> = ({ children }) => {
 
             try {
                 const res = await fetch('/api/check-auth', { credentials: 'include' });
-                if (res.ok) {
+                const data = await res.json().catch(() => null);
+                if (res.ok && data && data.status === 'authenticated') {
                     setStep('AUTHENTICATED');
                     setupInactivityTimer();
                 } else {
