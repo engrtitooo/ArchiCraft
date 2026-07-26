@@ -4,7 +4,7 @@ from fastapi import Request, HTTPException, status
 import jwt as pyjwt
 
 # Read from environment variables
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
+SECRET_KEY = os.environ.get("JWT_SECRET") or os.environ.get("JWT_SECRET_KEY", "default_secret_key_for_local_dev")
 ALGORITHM = "HS256"
 SESSION_COOKIE_NAME = "archicraft_session_v3"
 SESSION_DURATION_MINUTES = 5

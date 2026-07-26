@@ -103,80 +103,175 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   if (authStep === 'PASSWORD') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'Inter, sans-serif', padding: 16 }}>
-        <div style={{ maxWidth: 400, width: '100%', background: '#fff', borderRadius: 16, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ width: 56, height: 56, background: '#111827', borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <svg width="28" height="28" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)', fontFamily: 'Inter, sans-serif', padding: 16 }}>
+        <div style={{ maxWidth: 440, width: '100%', background: '#fff', borderRadius: 24, padding: '40px 32px', boxShadow: '0 20px 40px -12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, #111827, #374151)' }} />
+          
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ width: 64, height: 64, background: '#f3f4f6', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
+              <svg width="32" height="32" fill="none" stroke="#111827" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>ArchiCraft</h2>
-            <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>Enter your master password to continue</p>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: '-0.02em' }}>ArchiCraft Admin</h2>
+            <p style={{ color: '#6b7280', fontSize: 15, marginTop: 8, lineHeight: 1.5 }}>
+              Enter your master password to access the system
+            </p>
           </div>
+          
           <form onSubmit={handlePasswordSubmit}>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Master Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                autoFocus
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
-              />
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>Master Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  autoFocus
+                  placeholder="••••••••••••"
+                  style={{ 
+                    width: '100%', padding: '14px 16px', paddingLeft: 42, 
+                    border: '2px solid #e5e7eb', borderRadius: 12, 
+                    fontSize: 15, outline: 'none', boxSizing: 'border-box',
+                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                    color: '#111827', background: '#f9fafb'
+                  }}
+                  onFocus={e => { e.target.style.borderColor = '#111827'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 24, 39, 0.1)'; }}
+                  onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }}
+                />
+                <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                  <svg width="20" height="20" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                </div>
+              </div>
             </div>
-            {error && <p style={{ color: '#ef4444', fontSize: 13, textAlign: 'center', margin: '8px 0' }}>{error}</p>}
+            
+            {error && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="18" height="18" fill="none" stroke="#ef4444" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <p style={{ color: '#b91c1c', fontSize: 14, margin: 0, fontWeight: 500 }}>{error}</p>
+              </div>
+            )}
+            
             <button
               type="submit"
-              disabled={loading}
-              style={{ width: '100%', background: '#111827', color: '#fff', fontWeight: 700, fontSize: 15, padding: '12px 0', borderRadius: 8, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, marginTop: 4 }}
+              disabled={loading || !password}
+              style={{ 
+                width: '100%', background: '#111827', color: '#fff', fontWeight: 600, fontSize: 16, 
+                padding: '14px 0', borderRadius: 12, border: 'none', 
+                cursor: (loading || !password) ? 'not-allowed' : 'pointer', 
+                opacity: (loading || !password) ? 0.7 : 1, 
+                boxShadow: (loading || !password) ? 'none' : '0 4px 12px rgba(17, 24, 39, 0.2)',
+                transition: 'all 0.2s ease',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+              }}
             >
-              {loading ? 'Verifying…' : 'Continue →'}
+              {loading ? (
+                <>
+                  <svg style={{ animation: 'spin 1s linear infinite' }} width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  Continue
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </>
+              )}
             </button>
           </form>
         </div>
+        <style>{`
+          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        `}</style>
       </div>
     );
   }
 
   if (authStep === 'OTP') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'Inter, sans-serif', padding: 16 }}>
-        <div style={{ maxWidth: 400, width: '100%', background: '#fff', borderRadius: 16, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ width: 56, height: 56, background: '#111827', borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <svg width="28" height="28" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)', fontFamily: 'Inter, sans-serif', padding: 16 }}>
+        <div style={{ maxWidth: 440, width: '100%', background: '#fff', borderRadius: 24, padding: '40px 32px', boxShadow: '0 20px 40px -12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, #f97316, #fb923c)' }} />
+          
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ width: 64, height: 64, background: '#fff4ed', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, boxShadow: '0 4px 12px rgba(249, 115, 22, 0.15)' }}>
+              <svg width="32" height="32" fill="none" stroke="#f97316" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Check your email</h2>
-            <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>We sent a 6-digit code to <strong>{maskedEmail}</strong></p>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: '-0.02em' }}>Check your email</h2>
+            <p style={{ color: '#6b7280', fontSize: 15, marginTop: 8, lineHeight: 1.5 }}>
+              We sent a 6-digit code to<br />
+              <strong style={{ color: '#111827' }}>{maskedEmail}</strong>
+            </p>
           </div>
+          
           <form onSubmit={handleOtpSubmit}>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Verification Code</label>
-              <input
-                type="text"
-                value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                required
-                autoFocus
-                maxLength={6}
-                placeholder="000000"
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 22, textAlign: 'center', letterSpacing: 8, outline: 'none', boxSizing: 'border-box' }}
-              />
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, textAlign: 'center' }}>Enter Verification Code</label>
+              
+              <div style={{ position: 'relative', display: 'flex', gap: 10, justifyContent: 'center' }}>
+                {[0, 1, 2, 3, 4, 5].map(i => (
+                  <div key={i} style={{ 
+                    width: 48, height: 56, borderRadius: 12, 
+                    border: `2px solid ${otp.length === i ? '#f97316' : (otp[i] ? '#111827' : '#e5e7eb')}`, 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                    fontSize: 24, fontWeight: 700, color: '#111827', 
+                    background: otp[i] ? '#f9fafb' : '#fff', 
+                    boxShadow: otp.length === i ? '0 0 0 4px rgba(249, 115, 22, 0.1)' : 'none', 
+                    transition: 'all 0.2s ease' 
+                  }}>
+                    {otp[i] || ''}
+                  </div>
+                ))}
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  autoFocus
+                  maxLength={6}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'text' }}
+                />
+              </div>
             </div>
-            {error && <p style={{ color: '#ef4444', fontSize: 13, textAlign: 'center', margin: '8px 0' }}>{error}</p>}
+            
+            {error && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="18" height="18" fill="none" stroke="#ef4444" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <p style={{ color: '#b91c1c', fontSize: 14, margin: 0, fontWeight: 500 }}>{error}</p>
+              </div>
+            )}
+            
             <button
               type="submit"
               disabled={loading || otp.length < 6}
-              style={{ width: '100%', background: '#111827', color: '#fff', fontWeight: 700, fontSize: 15, padding: '12px 0', borderRadius: 8, border: 'none', cursor: (loading || otp.length < 6) ? 'not-allowed' : 'pointer', opacity: (loading || otp.length < 6) ? 0.6 : 1, marginTop: 4 }}
+              style={{ 
+                width: '100%', background: '#111827', color: '#fff', fontWeight: 600, fontSize: 16, 
+                padding: '14px 0', borderRadius: 12, border: 'none', 
+                cursor: (loading || otp.length < 6) ? 'not-allowed' : 'pointer', 
+                opacity: (loading || otp.length < 6) ? 0.7 : 1, 
+                boxShadow: (loading || otp.length < 6) ? 'none' : '0 4px 12px rgba(17, 24, 39, 0.2)',
+                transition: 'all 0.2s ease',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+              }}
             >
-              {loading ? 'Verifying…' : 'Verify & Access'}
+              {loading ? (
+                <>
+                  <svg style={{ animation: 'spin 1s linear infinite' }} width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  Verifying...
+                </>
+              ) : 'Verify & Access'}
             </button>
+            
             <button type="button" onClick={() => { setAuthStep('PASSWORD'); setOtp(''); setError(''); }}
-              style={{ width: '100%', background: 'transparent', color: '#6b7280', fontSize: 13, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', marginTop: 8 }}>
-              ← Back
+              style={{ width: '100%', background: 'transparent', color: '#6b7280', fontSize: 14, fontWeight: 500, padding: '12px 0', borderRadius: 8, border: 'none', cursor: 'pointer', marginTop: 12, transition: 'color 0.2s ease' }}
+              onMouseOver={e => e.currentTarget.style.color = '#111827'}
+              onMouseOut={e => e.currentTarget.style.color = '#6b7280'}
+            >
+              ← Back to Password
             </button>
           </form>
         </div>
+        <style>{`
+          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        `}</style>
       </div>
     );
   }
