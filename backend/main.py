@@ -3,6 +3,8 @@ import secrets
 import time
 from fastapi import FastAPI, Depends, Request, Response, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -114,3 +116,20 @@ async def logout(response: Response):
         samesite="strict",
     )
     return {"message": "Logged out"}
+
+# Mount the React frontend
+frontend_dist = os.path.join(os.path.dirname(__file__), "../dist")
+if os.path.exists(frontend_dist):
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    # Pass through 404s for API routes
+    if request.url.path.startswith("/api/"):
+        return Response(content="Not Found", status_code=404)
+    # Serve index.html for client-side routing
+    index_path = os.path.join(frontend_dist, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return Response(content="Frontend not built", status_code=404)
+
