@@ -9,7 +9,7 @@ SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("FATAL: JWT_SECRET_KEY environment variable is not set.")
 ALGORITHM = "HS256"
-SESSION_COOKIE_NAME = "session_token"
+SESSION_COOKIE_NAME = "archicraft_session_v2"
 SESSION_DURATION_MINUTES = 5
 
 def create_session_token(data: dict, expires_delta: Optional[timedelta] = None):
