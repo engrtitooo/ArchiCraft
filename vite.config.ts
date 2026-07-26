@@ -24,6 +24,9 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      optimizeDeps: {
+        include: ['react', 'react-dom', '@google/genai'],
       }
     };
 });
