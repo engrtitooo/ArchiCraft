@@ -5,9 +5,10 @@ from fastapi import Request, HTTPException, status
 from jose import jwt, JWTError
 
 # MUST be set in Cloud Run environment variables
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
 if not SECRET_KEY:
-    raise RuntimeError("FATAL: JWT_SECRET_KEY environment variable is not set.")
+    import logging as _log
+    _log.critical("JWT_SECRET_KEY is not set! All auth will be rejected.")
 ALGORITHM = "HS256"
 SESSION_COOKIE_NAME = "archicraft_session_v2"
 SESSION_DURATION_MINUTES = 5
@@ -33,6 +34,11 @@ def get_current_session(request: Request):
             detail="Not authenticated",
         )
     try:
+        if not SECRET_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Server misconfigured: contact admin",
+            )
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError:

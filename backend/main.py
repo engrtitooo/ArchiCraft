@@ -29,13 +29,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-APP_PASSWORD = os.environ.get("APP_PASSWORD")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 
 if not APP_PASSWORD:
-    raise RuntimeError("FATAL: APP_PASSWORD environment variable is not set.")
+    logging.critical("APP_PASSWORD is not set! All access attempts will be rejected.")
 if not ADMIN_EMAIL:
-    raise RuntimeError("FATAL: ADMIN_EMAIL environment variable is not set.")
+    logging.critical("ADMIN_EMAIL is not set! OTP emails cannot be sent.")
+
 
 # Temporary in-memory store for OTPs (For production, use Redis)
 # format: { "client_ip": {"otp": "123456", "expires_at": timestamp} }
