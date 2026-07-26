@@ -22,8 +22,9 @@ COPY backend /app/backend
 # Copy the built frontend from Stage 1
 COPY --from=build /app/dist /app/dist
 
-# Expose port (Cloud Run defaults to 8080)
-EXPOSE 8080
+# Cloud Run injects the PORT environment variable
+ENV PORT=8080
+EXPOSE $PORT
 
-# Use shell form so $PORT env variable is expanded by Cloud Run
-CMD exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080}
+# Start uvicorn using shell to expand the PORT variable correctly
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"]
