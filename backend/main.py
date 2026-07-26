@@ -1,0 +1,116 @@
+import os
+import secrets
+import time
+from fastapi import FastAPI, Depends, Request, Response, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import logging
+
+from auth import get_current_session, refresh_session_cookie, create_session_token, SESSION_COOKIE_NAME
+from email_dispatcher import send_otp_email, mask_email
+
+logging.basicConfig(level=logging.INFO)
+
+limiter = Limiter(key_func=get_remote_address)
+app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, restrict to frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "admin123")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@example.com")
+
+# Temporary in-memory store for OTPs (For production, use Redis)
+# format: { "client_ip": {"otp": "123456", "expires_at": timestamp} }
+otp_store = {}
+
+class PasswordRequest(BaseModel):
+    password: str
+
+class OTPRequest(BaseModel):
+    otp: str
+
+@app.post("/api/verify-access")
+@limiter.limit("5/minute")
+async def verify_access(request: Request, data: PasswordRequest):
+    if data.password != APP_PASSWORD:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
+    
+    # Generate 6-digit OTP
+    otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
+    expires_at = time.time() + 300 # 5 minutes
+
+    client_ip = get_remote_address(request)
+    otp_store[client_ip] = {"otp": otp_code, "expires_at": expires_at}
+
+    # Send email
+    await send_otp_email(ADMIN_EMAIL, otp_code)
+
+    return {"message": "OTP sent", "email": mask_email(ADMIN_EMAIL)}
+
+
+@app.post("/api/verify-2fa")
+@limiter.limit("5/minute")
+async def verify_2fa(request: Request, response: Response, data: OTPRequest):
+    client_ip = get_remote_address(request)
+    record = otp_store.get(client_ip)
+
+    if not record:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No OTP requested or expired")
+    
+    if time.time() > record["expires_at"]:
+        del otp_store[client_ip]
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP expired")
+
+    if data.otp != record["otp"]:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
+
+    # Clear OTP
+    del otp_store[client_ip]
+
+    # Issue Session
+    payload = {"sub": "admin"}
+    token = create_session_token(payload)
+    
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="strict",
+        max_age=300, # 5 minutes
+        secure=request.url.scheme == "https",
+    )
+    return {"message": "Authenticated successfully"}
+
+
+@app.get("/api/check-auth")
+async def check_auth(request: Request, response: Response, payload: dict = Depends(get_current_session)):
+    # Refresh session cookie
+    refresh_session_cookie(request, response, payload)
+    
+    # Strict headers to prevent CDN caching
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    return {"status": "authenticated"}
+
+
+@app.post("/api/logout")
+async def logout(response: Response):
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        httponly=True,
+        samesite="strict",
+    )
+    return {"message": "Logged out"}
