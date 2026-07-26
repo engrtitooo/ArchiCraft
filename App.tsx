@@ -31,7 +31,7 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       if (!cancelled) setAuthStep('PASSWORD');
     };
     // Only skip login if this exact tab session is already verified
-    const tabActive = sessionStorage.getItem('archicraft_tab');
+    const tabActive = sessionStorage.getItem('archicraft_tab_v3');
     if (tabActive === 'yes') {
       // Re-verify with server
       fetch('/api/check-auth', { credentials: 'include' })
@@ -41,7 +41,7 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             if (d && d.status === 'authenticated') {
               setAuthStep('AUTHENTICATED');
             } else {
-              sessionStorage.removeItem('archicraft_tab');
+              sessionStorage.removeItem('archicraft_tab_v3');
               setAuthStep('PASSWORD');
             }
           }
@@ -84,7 +84,7 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       });
       const data = await res.json();
       if (res.ok) {
-        sessionStorage.setItem('archicraft_tab', 'yes');
+        sessionStorage.setItem('archicraft_tab_v3', 'yes');
         setAuthStep('AUTHENTICATED');
       } else setError(data.detail || 'Invalid code');
     } catch { setError('Connection error. Try again.'); }

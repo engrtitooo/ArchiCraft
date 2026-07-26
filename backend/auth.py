@@ -6,7 +6,7 @@ import jwt as pyjwt
 # Read from environment variables
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
 ALGORITHM = "HS256"
-SESSION_COOKIE_NAME = "archicraft_session_v2"
+SESSION_COOKIE_NAME = "archicraft_session_v3"
 SESSION_DURATION_MINUTES = 5
 
 def create_session_token(data: dict) -> str:
