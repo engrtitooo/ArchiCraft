@@ -3,7 +3,7 @@ FROM node:22-slim AS build
 WORKDIR /app
 # Copy package.json and install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 # Copy all source files and build
 COPY . .
 RUN npm run build
