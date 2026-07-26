@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { UploadZone } from './components/UploadZone';
@@ -11,6 +10,183 @@ import { InfoModal, ModalType } from './components/InfoModal';
 import { AppState, DesignStyle, ConceptInputData, DesignResponse, ConceptResponse, AppMode, UnitSystem } from './types';
 import { analyzeFloorPlan, generateArchitecturalConcept } from './services/geminiService';
 
+// ──────────────────────────────────────────────────────────────────
+// AUTHENTICATION GATE — embedded directly to guarantee it is bundled
+// ──────────────────────────────────────────────────────────────────
+type AuthStep = 'CHECKING' | 'PASSWORD' | 'OTP' | 'AUTHENTICATED';
+
+const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [authStep, setAuthStep] = useState<AuthStep>('CHECKING');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      // Always call logout first to clear any stale cookie, then show password
+      try { await fetch('/api/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
+      if (!cancelled) setAuthStep('PASSWORD');
+    };
+    // Only skip login if this exact tab session is already verified
+    const tabActive = sessionStorage.getItem('archicraft_tab');
+    if (tabActive === 'yes') {
+      // Re-verify with server
+      fetch('/api/check-auth', { credentials: 'include' })
+        .then(r => r.json().catch(() => ({})))
+        .then(d => {
+          if (!cancelled) {
+            if (d && d.status === 'authenticated') {
+              setAuthStep('AUTHENTICATED');
+            } else {
+              sessionStorage.removeItem('archicraft_tab');
+              setAuthStep('PASSWORD');
+            }
+          }
+        })
+        .catch(() => { if (!cancelled) setAuthStep('PASSWORD'); });
+    } else {
+      init();
+    }
+    return () => { cancelled = true; };
+  }, []);
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/verify-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (res.ok) { setMaskedEmail(data.email || ''); setAuthStep('OTP'); }
+      else setError(data.detail || 'Invalid password');
+    } catch { setError('Connection error. Try again.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ otp }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        sessionStorage.setItem('archicraft_tab', 'yes');
+        setAuthStep('AUTHENTICATED');
+      } else setError(data.detail || 'Invalid code');
+    } catch { setError('Connection error. Try again.'); }
+    finally { setLoading(false); }
+  };
+
+  if (authStep === 'CHECKING') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ width: 48, height: 48, border: '3px solid #111827', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <p style={{ color: '#6b7280', marginTop: 16 }}>Verifying session…</p>
+      </div>
+    );
+  }
+
+  if (authStep === 'PASSWORD') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'Inter, sans-serif', padding: 16 }}>
+        <div style={{ maxWidth: 400, width: '100%', background: '#fff', borderRadius: 16, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ width: 56, height: 56, background: '#111827', borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+              <svg width="28" height="28" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>ArchiCraft</h2>
+            <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>Enter your master password to continue</p>
+          </div>
+          <form onSubmit={handlePasswordSubmit}>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Master Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoFocus
+                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            {error && <p style={{ color: '#ef4444', fontSize: 13, textAlign: 'center', margin: '8px 0' }}>{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{ width: '100%', background: '#111827', color: '#fff', fontWeight: 700, fontSize: 15, padding: '12px 0', borderRadius: 8, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, marginTop: 4 }}
+            >
+              {loading ? 'Verifying…' : 'Continue →'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStep === 'OTP') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'Inter, sans-serif', padding: 16 }}>
+        <div style={{ maxWidth: 400, width: '100%', background: '#fff', borderRadius: 16, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ width: 56, height: 56, background: '#111827', borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+              <svg width="28" height="28" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Check your email</h2>
+            <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>We sent a 6-digit code to <strong>{maskedEmail}</strong></p>
+          </div>
+          <form onSubmit={handleOtpSubmit}>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Verification Code</label>
+              <input
+                type="text"
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+                autoFocus
+                maxLength={6}
+                placeholder="000000"
+                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 22, textAlign: 'center', letterSpacing: 8, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            {error && <p style={{ color: '#ef4444', fontSize: 13, textAlign: 'center', margin: '8px 0' }}>{error}</p>}
+            <button
+              type="submit"
+              disabled={loading || otp.length < 6}
+              style={{ width: '100%', background: '#111827', color: '#fff', fontWeight: 700, fontSize: 15, padding: '12px 0', borderRadius: 8, border: 'none', cursor: (loading || otp.length < 6) ? 'not-allowed' : 'pointer', opacity: (loading || otp.length < 6) ? 0.6 : 1, marginTop: 4 }}
+            >
+              {loading ? 'Verifying…' : 'Verify & Access'}
+            </button>
+            <button type="button" onClick={() => { setAuthStep('PASSWORD'); setOtp(''); setError(''); }}
+              style={{ width: '100%', background: 'transparent', color: '#6b7280', fontSize: 13, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', marginTop: 8 }}>
+              ← Back
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// ──────────────────────────────────────────────────────────────────
+// MAIN APP
+// ──────────────────────────────────────────────────────────────────
 const App: React.FC = () => {
   // --- API Key State ---
   const [hasApiKey, setHasApiKey] = useState(false);
@@ -204,162 +380,164 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
-      <Header onNavigate={setActiveModal} onLogoClick={handleReset} />
+    <AuthGate>
+      <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+        <Header onNavigate={setActiveModal} onLogoClick={handleReset} />
 
-      <InfoModal type={activeModal} onClose={() => setActiveModal(null)} />
+        <InfoModal type={activeModal} onClose={() => setActiveModal(null)} />
 
-      <main className="flex-grow">
-        {/* LANDING / MODE SELECTION */}
-        {state.step === 'SELECT_MODE' && (
-             <div className="max-w-7xl mx-auto px-4 py-20 text-center animate-fade-in">
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-arch-900 mb-6 leading-tight">
-                Architectural Intelligence <br />
-                <span className="text-accent">Made Simple</span>
-                </h1>
-                
-                {/* Unit Selector */}
-                <div className="flex justify-center mb-10">
-                    <div className="bg-white p-1 rounded-lg border border-gray-200 inline-flex shadow-sm">
-                        <button 
-                            onClick={() => toggleUnitSystem('m')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${state.unitSystem === 'm' ? 'bg-arch-900 text-white shadow' : 'text-gray-500 hover:text-gray-900'}`}
-                        >
-                            Meters (m)
-                        </button>
-                        <button 
-                            onClick={() => toggleUnitSystem('ft')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${state.unitSystem === 'ft' ? 'bg-arch-900 text-white shadow' : 'text-gray-500 hover:text-gray-900'}`}
-                        >
-                            Feet (ft)
-                        </button>
-                    </div>
-                </div>
+        <main className="flex-grow">
+          {/* LANDING / MODE SELECTION */}
+          {state.step === 'SELECT_MODE' && (
+               <div className="max-w-7xl mx-auto px-4 py-20 text-center animate-fade-in">
+                  <h1 className="text-4xl md:text-5xl font-serif font-bold text-arch-900 mb-6 leading-tight">
+                  Architectural Intelligence <br />
+                  <span className="text-accent">Made Simple</span>
+                  </h1>
+                  
+                  {/* Unit Selector */}
+                  <div className="flex justify-center mb-10">
+                      <div className="bg-white p-1 rounded-lg border border-gray-200 inline-flex shadow-sm">
+                          <button 
+                              onClick={() => toggleUnitSystem('m')}
+                              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${state.unitSystem === 'm' ? 'bg-arch-900 text-white shadow' : 'text-gray-500 hover:text-gray-900'}`}
+                          >
+                              Meters (m)
+                          </button>
+                          <button 
+                              onClick={() => toggleUnitSystem('ft')}
+                              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${state.unitSystem === 'ft' ? 'bg-arch-900 text-white shadow' : 'text-gray-500 hover:text-gray-900'}`}
+                          >
+                              Feet (ft)
+                          </button>
+                      </div>
+                  </div>
 
-                <p className="text-lg text-gray-500 mb-16 max-w-2xl mx-auto">
-                    Select how you want to start your design journey.
-                </p>
+                  <p className="text-lg text-gray-500 mb-16 max-w-2xl mx-auto">
+                      Select how you want to start your design journey.
+                  </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    {/* Card Mode A */}
-                    <div 
-                        onClick={() => handleModeSelect('MODE_A')}
-                        className="group cursor-pointer bg-white p-10 rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-accent/50 transition-all duration-300 relative overflow-hidden"
-                    >
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent group-hover:via-accent transition-all"></div>
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6 mx-auto group-hover:bg-accent/10 transition-colors">
-                             <svg className="w-8 h-8 text-gray-600 group-hover:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        </div>
-                        <h3 className="text-xl font-bold font-serif mb-2">Existing Floor Plan</h3>
-                        <p className="text-sm text-gray-500">Upload an image of a floor plan. We'll identify rooms and generate interior design concepts.</p>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                      {/* Card Mode A */}
+                      <div 
+                          onClick={() => handleModeSelect('MODE_A')}
+                          className="group cursor-pointer bg-white p-10 rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-accent/50 transition-all duration-300 relative overflow-hidden"
+                      >
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent group-hover:via-accent transition-all"></div>
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6 mx-auto group-hover:bg-accent/10 transition-colors">
+                               <svg className="w-8 h-8 text-gray-600 group-hover:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </div>
+                          <h3 className="text-xl font-bold font-serif mb-2">Existing Floor Plan</h3>
+                          <p className="text-sm text-gray-500">Upload an image of a floor plan. We'll identify rooms and generate interior design concepts.</p>
+                      </div>
 
-                    {/* Card Mode B */}
-                    <div 
-                        onClick={() => handleModeSelect('MODE_B')}
-                        className="group cursor-pointer bg-white p-10 rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-accent/50 transition-all duration-300 relative overflow-hidden"
-                    >
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent group-hover:via-accent transition-all"></div>
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6 mx-auto group-hover:bg-accent/10 transition-colors">
-                            <svg className="w-8 h-8 text-gray-600 group-hover:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                        </div>
-                        <h3 className="text-xl font-bold font-serif mb-2">Architectural Concept</h3>
-                        <p className="text-sm text-gray-500">No plan? No problem. Describe your plot and needs, and we'll generate a layout for you.</p>
-                    </div>
-                </div>
-             </div>
-        )}
+                      {/* Card Mode B */}
+                      <div 
+                          onClick={() => handleModeSelect('MODE_B')}
+                          className="group cursor-pointer bg-white p-10 rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-accent/50 transition-all duration-300 relative overflow-hidden"
+                      >
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent group-hover:via-accent transition-all"></div>
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6 mx-auto group-hover:bg-accent/10 transition-colors">
+                              <svg className="w-8 h-8 text-gray-600 group-hover:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                          </div>
+                          <h3 className="text-xl font-bold font-serif mb-2">Architectural Concept</h3>
+                          <p className="text-sm text-gray-500">No plan? No problem. Describe your plot and needs, and we'll generate a layout for you.</p>
+                      </div>
+                  </div>
+               </div>
+          )}
 
-        {/* INPUT PHASE */}
-        {state.step === 'INPUT' && (
-            <div className="max-w-7xl mx-auto px-4 py-12">
-                 {/* Mode A Input */}
-                 {state.mode === 'MODE_A' && (
-                    <>
-                        <div className="mb-8 flex items-center justify-between">
-                            <button onClick={handleBackToMode} className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                                Back to Selection
-                            </button>
-                            <span className="text-xs font-mono text-gray-400">Unit: {state.unitSystem === 'm' ? 'Meters' : 'Feet'}</span>
-                        </div>
-                        
-                        {!state.selectedFile ? (
-                             <div className="text-center animate-fade-in">
-                                <h2 className="text-3xl font-serif font-bold text-gray-900 mb-6">Upload Your Plan</h2>
-                                <UploadZone onFileSelect={handleFileSelect} />
-                             </div>
-                        ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 animate-fade-in">
-                                <div className="lg:col-span-1">
-                                    <div className="sticky top-24">
-                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Your Floor Plan</h3>
-                                        <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
-                                            <img src={state.previewUrl!} alt="Preview" className="w-full h-auto rounded-lg" />
-                                        </div>
-                                        <button onClick={() => setState(prev => ({...prev, selectedFile: null}))} className="mt-4 text-sm text-red-500 hover:text-red-700 underline">Remove Image</button>
-                                        {state.error && <div className="mt-4 p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100">{state.error}</div>}
-                                    </div>
-                                </div>
-                                <div className="lg:col-span-2">
-                                    <StyleSelector 
-                                        selectedStyle={state.selectedStyle} 
-                                        onSelect={handleStyleSelect}
-                                        onConfirm={handleGenerateModeA}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </>
-                 )}
+          {/* INPUT PHASE */}
+          {state.step === 'INPUT' && (
+              <div className="max-w-7xl mx-auto px-4 py-12">
+                   {/* Mode A Input */}
+                   {state.mode === 'MODE_A' && (
+                      <>
+                          <div className="mb-8 flex items-center justify-between">
+                              <button onClick={handleBackToMode} className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                                  Back to Selection
+                              </button>
+                              <span className="text-xs font-mono text-gray-400">Unit: {state.unitSystem === 'm' ? 'Meters' : 'Feet'}</span>
+                          </div>
+                          
+                          {!state.selectedFile ? (
+                               <div className="text-center animate-fade-in">
+                                  <h2 className="text-3xl font-serif font-bold text-gray-900 mb-6">Upload Your Plan</h2>
+                                  <UploadZone onFileSelect={handleFileSelect} />
+                               </div>
+                          ) : (
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 animate-fade-in">
+                                  <div className="lg:col-span-1">
+                                      <div className="sticky top-24">
+                                          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Your Floor Plan</h3>
+                                          <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+                                              <img src={state.previewUrl!} alt="Preview" className="w-full h-auto rounded-lg" />
+                                          </div>
+                                          <button onClick={() => setState(prev => ({...prev, selectedFile: null}))} className="mt-4 text-sm text-red-500 hover:text-red-700 underline">Remove Image</button>
+                                          {state.error && <div className="mt-4 p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100">{state.error}</div>}
+                                      </div>
+                                  </div>
+                                  <div className="lg:col-span-2">
+                                      <StyleSelector 
+                                          selectedStyle={state.selectedStyle} 
+                                          onSelect={handleStyleSelect}
+                                          onConfirm={handleGenerateModeA}
+                                      />
+                                  </div>
+                              </div>
+                          )}
+                      </>
+                   )}
 
-                 {/* Mode B Input */}
-                 {state.mode === 'MODE_B' && (
-                     <ConceptInputForm 
-                        data={state.conceptInputs}
-                        unitSystem={state.unitSystem}
-                        onChange={handleConceptInputChange}
-                        onUnitChange={handleUnitChangeInForm}
-                        onSubmit={handleGenerateModeB}
-                        onBack={handleBackToMode}
-                     />
-                 )}
-            </div>
-        )}
+                   {/* Mode B Input */}
+                   {state.mode === 'MODE_B' && (
+                       <ConceptInputForm 
+                          data={state.conceptInputs}
+                          unitSystem={state.unitSystem}
+                          onChange={handleConceptInputChange}
+                          onUnitChange={handleUnitChangeInForm}
+                          onSubmit={handleGenerateModeB}
+                          onBack={handleBackToMode}
+                       />
+                   )}
+              </div>
+          )}
 
-        {/* LOADING PHASE */}
-        {state.step === 'ANALYZING' && (
-          <LoadingScreen mode={state.mode!} />
-        )}
+          {/* LOADING PHASE */}
+          {state.step === 'ANALYZING' && (
+            <LoadingScreen mode={state.mode!} />
+          )}
 
-        {/* RESULTS PHASE */}
-        {state.step === 'RESULTS' && state.result && (
-            <>
-                {state.mode === 'MODE_A' ? (
-                     <Dashboard 
-                        data={state.result as DesignResponse} 
-                        originalImage={state.previewUrl!} 
-                        onReset={handleReset}
-                        onChangeKey={handleSelectKey}
-                    />
-                ) : (
-                    <ConceptDashboard 
-                        data={state.result as ConceptResponse}
-                        unitSystem={state.unitSystem}
-                        onReset={handleReset}
-                        onChangeKey={handleSelectKey}
-                    />
-                )}
-            </>
-        )}
-      </main>
-      
-      <footer className="bg-white border-t border-gray-100 py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-            <p className="text-sm text-gray-400">Powered by Gemini 3 Pro • Built for Google DeepMind Hackathon</p>
-        </div>
-      </footer>
-    </div>
+          {/* RESULTS PHASE */}
+          {state.step === 'RESULTS' && state.result && (
+              <>
+                  {state.mode === 'MODE_A' ? (
+                       <Dashboard 
+                          data={state.result as DesignResponse} 
+                          originalImage={state.previewUrl!} 
+                          onReset={handleReset}
+                          onChangeKey={handleSelectKey}
+                      />
+                  ) : (
+                      <ConceptDashboard 
+                          data={state.result as ConceptResponse}
+                          unitSystem={state.unitSystem}
+                          onReset={handleReset}
+                          onChangeKey={handleSelectKey}
+                      />
+                  )}
+              </>
+          )}
+        </main>
+        
+        <footer className="bg-white border-t border-gray-100 py-8 mt-12">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+              <p className="text-sm text-gray-400">Powered by Gemini 3 Pro • Built for Google DeepMind Hackathon</p>
+          </div>
+        </footer>
+      </div>
+    </AuthGate>
   );
 };
 
