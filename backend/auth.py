@@ -4,8 +4,10 @@ from typing import Optional
 from fastapi import Request, HTTPException, status
 from jose import jwt, JWTError
 
-# Use a secure secret key, defaulting to a random string in dev
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "supersecretkey_for_dev_only_change_in_prod")
+# MUST be set in Cloud Run environment variables
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("FATAL: JWT_SECRET_KEY environment variable is not set.")
 ALGORITHM = "HS256"
 SESSION_COOKIE_NAME = "session_token"
 SESSION_DURATION_MINUTES = 5

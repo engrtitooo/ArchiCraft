@@ -25,7 +25,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ children }) => {
                 // If this flag is missing, the tab was closed and reopened, or it's a new tab.
                 // Destroy backend session (if any) and reset.
                 try {
-                    await fetch('/api/logout', { method: 'POST' });
+                    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
                 } catch (e) {
                     console.error("Logout error", e);
                 }
@@ -34,14 +34,16 @@ export const AccessGate: React.FC<AccessGateProps> = ({ children }) => {
             }
 
             try {
-                const res = await fetch('/api/check-auth');
+                const res = await fetch('/api/check-auth', { credentials: 'include' });
                 if (res.ok) {
                     setStep('AUTHENTICATED');
                     setupInactivityTimer();
                 } else {
+                    sessionStorage.removeItem('tab_session_active');
                     setStep('PASSWORD');
                 }
             } catch (err) {
+                sessionStorage.removeItem('tab_session_active');
                 setStep('PASSWORD');
             }
         };
