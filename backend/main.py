@@ -11,8 +11,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import logging
 
-from auth import get_current_session, refresh_session_cookie, create_session_token, SESSION_COOKIE_NAME
-from email_dispatcher import send_otp_email, mask_email
+from backend.auth import get_current_session, refresh_session_cookie, create_session_token, SESSION_COOKIE_NAME
+from backend.email_dispatcher import send_otp_email, mask_email
 
 logging.basicConfig(level=logging.INFO)
 
