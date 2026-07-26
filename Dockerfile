@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend ./backend
 
 # Copy built React frontend from Stage 1
-COPY --from=build /app/dist ./dist
+COPY --from=build /app/dist ./frontend_dist
 
 # Verify the import works at build time (catches errors early)
 RUN python -c "from backend.main import app; print('Startup check OK')"

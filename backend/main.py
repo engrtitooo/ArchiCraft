@@ -106,7 +106,7 @@ async def logout(response: Response):
 
 
 # ── Static frontend ────────────────────────────────────────────────
-DIST = os.path.join(os.path.dirname(__file__), "../dist")
+DIST = os.path.join(os.path.dirname(__file__), "../frontend_dist")
 
 if os.path.isdir(DIST):
     _assets = os.path.join(DIST, "assets")
