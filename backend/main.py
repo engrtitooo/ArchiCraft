@@ -1,20 +1,32 @@
 import os
 import secrets
 import time
+import logging
 from fastapi import FastAPI, Depends, Request, Response, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import logging
 
 from backend.auth import get_current_session, refresh_session_cookie, create_session_token, SESSION_COOKIE_NAME
 from backend.email_dispatcher import send_otp_email, mask_email
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+
+if not APP_PASSWORD:
+    logger.critical("APP_PASSWORD is not set!")
+if not ADMIN_EMAIL:
+    logger.critical("ADMIN_EMAIL is not set!")
+
+# In-memory OTP store: {ip: {otp, expires_at}}
+otp_store: dict = {}
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
@@ -23,24 +35,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict to frontend domain
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
-
-if not APP_PASSWORD:
-    logging.critical("APP_PASSWORD is not set! All access attempts will be rejected.")
-if not ADMIN_EMAIL:
-    logging.critical("ADMIN_EMAIL is not set! OTP emails cannot be sent.")
-
-
-# Temporary in-memory store for OTPs (For production, use Redis)
-# format: { "client_ip": {"otp": "123456", "expires_at": timestamp} }
-otp_store = {}
 
 class PasswordRequest(BaseModel):
     password: str
@@ -48,105 +48,79 @@ class PasswordRequest(BaseModel):
 class OTPRequest(BaseModel):
     otp: str
 
+
 @app.post("/api/verify-access")
 @limiter.limit("5/minute")
 async def verify_access(request: Request, data: PasswordRequest):
-    if data.password != APP_PASSWORD:
+    if not APP_PASSWORD or data.password != APP_PASSWORD:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
-    
-    # Generate 6-digit OTP
+
     otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
-    expires_at = time.time() + 300 # 5 minutes
-
-    client_ip = get_remote_address(request)
-    otp_store[client_ip] = {"otp": otp_code, "expires_at": expires_at}
-
-    # Send email
+    otp_store[get_remote_address(request)] = {
+        "otp": otp_code,
+        "expires_at": time.time() + 300,
+    }
     await send_otp_email(ADMIN_EMAIL, otp_code)
-
     return {"message": "OTP sent", "email": mask_email(ADMIN_EMAIL)}
 
 
 @app.post("/api/verify-2fa")
 @limiter.limit("5/minute")
 async def verify_2fa(request: Request, response: Response, data: OTPRequest):
-    client_ip = get_remote_address(request)
-    record = otp_store.get(client_ip)
+    ip = get_remote_address(request)
+    record = otp_store.get(ip)
 
     if not record:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No OTP requested or expired")
-    
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No OTP pending")
     if time.time() > record["expires_at"]:
-        del otp_store[client_ip]
+        otp_store.pop(ip, None)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP expired")
-
     if data.otp != record["otp"]:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
 
-    # Clear OTP
-    del otp_store[client_ip]
+    otp_store.pop(ip, None)
 
-    # Issue Session
-    payload = {"sub": "admin"}
-    token = create_session_token(payload)
-    
+    token = create_session_token({"sub": "admin"})
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
         httponly=True,
         samesite="strict",
-        max_age=300, # 5 minutes
+        max_age=300,
         secure=request.url.scheme == "https",
     )
-    return {"message": "Authenticated successfully"}
+    return {"message": "Authenticated"}
 
 
 @app.get("/api/check-auth")
 async def check_auth(request: Request, response: Response, payload: dict = Depends(get_current_session)):
-    # Refresh session cookie
     refresh_session_cookie(request, response, payload)
-    
-    # Strict headers to prevent CDN caching
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-
+    response.headers["Cache-Control"] = "no-store"
     return {"status": "authenticated"}
 
 
 @app.post("/api/logout")
 async def logout(response: Response):
-    response.delete_cookie(
-        key=SESSION_COOKIE_NAME,
-        httponly=True,
-        samesite="strict",
-    )
+    response.delete_cookie(key=SESSION_COOKIE_NAME, httponly=True, samesite="strict")
     return {"message": "Logged out"}
 
-# Serve static assets and SPA index.html
-frontend_dist = os.path.join(os.path.dirname(__file__), "../dist")
 
-if os.path.exists(frontend_dist):
-    assets_dir = os.path.join(frontend_dist, "assets")
-    if os.path.exists(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+# ── Static frontend ────────────────────────────────────────────────
+DIST = os.path.join(os.path.dirname(__file__), "../dist")
 
-    @app.get("/{full_path:path}")
-    async def serve_frontend(request: Request, full_path: str):
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="API route not found")
-        
-        file_path = os.path.join(frontend_dist, full_path)
-        if os.path.isfile(file_path):
-            response = FileResponse(file_path)
-            if full_path.startswith("assets/"):
-                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-            return response
-            
-        # Prevent caching of index.html so users always get the latest JS bundle
-        response = FileResponse(os.path.join(frontend_dist, "index.html"))
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-        return response
+if os.path.isdir(DIST):
+    _assets = os.path.join(DIST, "assets")
+    if os.path.isdir(_assets):
+        app.mount("/assets", StaticFiles(directory=_assets), name="assets")
 
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        # Never catch /api routes here
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404)
+        candidate = os.path.join(DIST, full_path)
+        if os.path.isfile(candidate):
+            return FileResponse(candidate)
+        resp = FileResponse(os.path.join(DIST, "index.html"))
+        resp.headers["Cache-Control"] = "no-store"
+        return resp

@@ -1,65 +1,44 @@
 import os
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime, timedelta, timezone
 from fastapi import Request, HTTPException, status
-from jose import jwt, JWTError
+import jwt as pyjwt
 
-# MUST be set in Cloud Run environment variables
+# Read from environment variables
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
-if not SECRET_KEY:
-    import logging as _log
-    _log.critical("JWT_SECRET_KEY is not set! All auth will be rejected.")
 ALGORITHM = "HS256"
 SESSION_COOKIE_NAME = "archicraft_session_v2"
 SESSION_DURATION_MINUTES = 5
 
-def create_session_token(data: dict, expires_delta: Optional[timedelta] = None):
+def create_session_token(data: dict) -> str:
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=SESSION_DURATION_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=SESSION_DURATION_MINUTES)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return pyjwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_session(request: Request):
-    """
-    FastAPI Dependency to enforce session existence via HttpOnly cookie.
-    """
+def get_current_session(request: Request) -> dict:
+    """FastAPI dependency — raises 401 if no valid session cookie."""
     token = request.cookies.get(SESSION_COOKIE_NAME)
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    if not SECRET_KEY:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Server misconfigured")
     try:
-        if not SECRET_KEY:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Server misconfigured: contact admin",
-            )
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = pyjwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expired or invalid",
-        )
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
+    except pyjwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
 
 def refresh_session_cookie(request: Request, response, payload: dict):
-    """
-    Refreshes the JWT session for exactly 5 minutes if valid.
-    """
-    # Remove exp before re-encoding
-    data_to_encode = {k: v for k, v in payload.items() if k != 'exp'}
-    new_token = create_session_token(data_to_encode)
-    
+    """Refreshes the session cookie for another 5 minutes."""
+    data = {k: v for k, v in payload.items() if k != "exp"}
+    new_token = create_session_token(data)
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=new_token,
         httponly=True,
         samesite="strict",
         max_age=SESSION_DURATION_MINUTES * 60,
-        secure=request.url.scheme == "https", # Secure in prod
+        secure=request.url.scheme == "https",
     )
