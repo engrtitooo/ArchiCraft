@@ -3,6 +3,8 @@ import smtplib
 from email.message import EmailMessage
 import httpx
 import logging
+from starlette.concurrency import run_in_threadpool
+from backend.security_config import read_secret, SecretConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +22,20 @@ def mask_email(email: str) -> str:
 async def send_otp_email(to_email: str, otp_code: str) -> bool:
     """
     Sends an OTP code via SMTP, falling back to Resend API.
-    If no credentials are provided, prints to console (Development mode).
+    Returns False on delivery failure; verification codes are never logged.
     """
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = os.environ.get("SMTP_PORT", 587)
     smtp_user = os.environ.get("SMTP_USER")
-    smtp_pass = os.environ.get("SMTP_PASS")
-    resend_api_key = os.environ.get("RESEND_API_KEY")
+    try:
+        smtp_pass = read_secret("SMTP_PASS") if os.environ.get("SMTP_PASS") else None
+    except SecretConfigurationError:
+        smtp_pass = None
+        logger.error("SMTP credential must be replaced.")
+    try:
+        resend_api_key = read_secret("RESEND_API_KEY") if os.environ.get("RESEND_API_KEY") else None
+    except SecretConfigurationError:
+        resend_api_key = None
 
     subject = "Your ArchiCraft Verification Code"
     body = f"Your verification code is: {otp_code}\nThis code will expire in 5 minutes."
@@ -39,19 +48,22 @@ async def send_otp_email(to_email: str, otp_code: str) -> bool:
             msg['From'] = smtp_user
             msg['To'] = to_email
 
-            with smtplib.SMTP(smtp_host, int(smtp_port)) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
+            def deliver():
+                with smtplib.SMTP(smtp_host, int(smtp_port), timeout=15) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+
+            await run_in_threadpool(deliver)
             logger.info("Email sent via SMTP.")
             return True
-        except Exception as e:
-            logger.error(f"Failed to send email via SMTP: {e}")
+        except Exception:
+            logger.error("SMTP delivery failed.")
             # Fall through to Resend
 
     if resend_api_key:
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=False) as client:
                 response = await client.post(
                     "https://api.resend.com/emails",
                     headers={"Authorization": f"Bearer {resend_api_key}"},
@@ -66,15 +78,8 @@ async def send_otp_email(to_email: str, otp_code: str) -> bool:
                 response.raise_for_status()
                 logger.info("Email sent via Resend API.")
                 return True
-        except Exception as e:
-            logger.error(f"Failed to send email via Resend API: {e}")
-            # Fall through to console fallback
+        except Exception:
+            logger.error("Email provider delivery failed.")
 
-    # Development Fallback
-    logger.warning("No email credentials configured or sending failed. Falling back to console print.")
-    print("\n" + "="*40)
-    print("DEVELOPMENT OTP FALLBACK")
-    print(f"To: {to_email}")
-    print(f"Code: {otp_code}")
-    print("="*40 + "\n")
-    return True
+    logger.error("Verification email was not delivered.")
+    return False

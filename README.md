@@ -49,14 +49,30 @@ To run this project locally:
     ```bash
     npm install
     ```
-3.  Set up environment variables:
-    *   Create a `.env` file.
-    *   Add your Google Gemini API key: `API_KEY=your_key_here`.
-    *   *Note: For full functionality, the API key must be associated with a Google Cloud project with billing enabled to access the Gemini 3 Pro Image model.*
-4.  Run the development server:
+3.  Copy `.env.example` to `.env` and populate fresh backend credentials. Set `GEMINI_API_KEY` (the existing `API_KEY` alias is also supported), an `APP_PASSWORD` of at least 12 characters, a random `JWT_SECRET` of at least 32 characters, `ADMIN_EMAIL`, and valid SMTP or Resend settings. Store production values in your secret manager; do not put them in frontend build settings or source control. The previously disclosed credentials are explicitly rejected.
+4.  Install and run the Python backend in a separate terminal:
     ```bash
-    npm start
+    python -m pip install -r backend/requirements.txt
+    python -m uvicorn backend.main:app --env-file .env --port 8000
     ```
+5.  Run the frontend development server. Vite forwards `/api` to the backend:
+    ```bash
+    npm run dev
+    ```
+
+All four Gemini operations use the authenticated backend. The browser never receives a provider key. Image generation still requires the appropriate Google project access and billing.
+
+## Security verification
+
+```bash
+npm run typecheck
+npm run test:security
+python -m unittest discover -s tests -v
+python scripts/check_secrets.py
+npm run build
+```
+
+See [credential rotation and deployment instructions](docs/SECURITY_REMEDIATION.md) before deploying this repair. Removing the exposed file does not revoke historical credentials.
 
 ## Hackathon Context
 This project was built for **Google DeepMind - Vibe Code with Gemini 3 Pro in AI Studio**. It demonstrates the practical application of Multimodal LLMs in the AEC (Architecture, Engineering, and Construction) industry, showcasing how generative models can move beyond text chat to produce structured, visual, and spatial data.

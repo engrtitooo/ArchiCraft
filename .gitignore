@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Runtime credentials, deployment dumps and generated Python files
+.env
+.env.*
+!.env.example
+ERROR
+frontend_dist/
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

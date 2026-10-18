@@ -25,13 +25,21 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     let cancelled = false;
+    const sessionExpired = () => {
+      sessionStorage.removeItem('archicraft_tab_v4');
+      setPassword('');
+      setOtp('');
+      setError('Your session has expired. Please sign in again.');
+      setAuthStep('PASSWORD');
+    };
+    window.addEventListener('archicraft:session-expired', sessionExpired);
     const init = async () => {
       // Always call logout first to clear any stale cookie, then show password
       try { await fetch('/api/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
       if (!cancelled) setAuthStep('PASSWORD');
     };
     // Only skip login if this exact tab session is already verified
-    const tabActive = sessionStorage.getItem('archicraft_tab_v3');
+    const tabActive = sessionStorage.getItem('archicraft_tab_v4');
     if (tabActive === 'yes') {
       // Re-verify with server
       fetch('/api/check-auth', { credentials: 'include' })
@@ -41,7 +49,7 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             if (d && d.status === 'authenticated') {
               setAuthStep('AUTHENTICATED');
             } else {
-              sessionStorage.removeItem('archicraft_tab_v3');
+              sessionStorage.removeItem('archicraft_tab_v4');
               setAuthStep('PASSWORD');
             }
           }
@@ -50,7 +58,10 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     } else {
       init();
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      window.removeEventListener('archicraft:session-expired', sessionExpired);
+    };
   }, []);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -84,7 +95,9 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       });
       const data = await res.json();
       if (res.ok) {
-        sessionStorage.setItem('archicraft_tab_v3', 'yes');
+        sessionStorage.setItem('archicraft_tab_v4', 'yes');
+        setPassword('');
+        setOtp('');
         setAuthStep('AUTHENTICATED');
       } else setError(data.detail || 'Invalid code');
     } catch { setError('Connection error. Try again.'); }
@@ -283,9 +296,6 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 // MAIN APP
 // ──────────────────────────────────────────────────────────────────
 const App: React.FC = () => {
-  // --- API Key State ---
-  const [hasApiKey, setHasApiKey] = useState(false);
-  
   // --- Modal State ---
   const [activeModal, setActiveModal] = useState<ModalType>(null);
 
@@ -313,30 +323,6 @@ const App: React.FC = () => {
     result: null,
     error: null,
   });
-
-  // Check for API Key on mount
-  useEffect(() => {
-    const checkKey = async () => {
-        if ((window as any).aistudio && (window as any).aistudio.hasSelectedApiKey) {
-            const has = await (window as any).aistudio.hasSelectedApiKey();
-            setHasApiKey(has);
-        } else {
-            // If not in the specific environment with the key selector, assume env var is set
-            setHasApiKey(true);
-        }
-    };
-    checkKey();
-  }, []);
-
-  const handleSelectKey = async () => {
-      if ((window as any).aistudio && (window as any).aistudio.openSelectKey) {
-          await (window as any).aistudio.openSelectKey();
-          setHasApiKey(true);
-      } else {
-          // Fallback if running outside of AI Studio environment
-          alert("Key selection is only available in the AI Studio environment.");
-      }
-  };
 
   const handleModeSelect = (mode: AppMode) => {
       setState(prev => ({
@@ -432,47 +418,6 @@ const App: React.FC = () => {
   const handleBackToMode = () => {
        setState(prev => ({ ...prev, step: 'SELECT_MODE', mode: null }));
   };
-
-  // --- RENDER API KEY SELECTION SCREEN IF NEEDED ---
-  if (!hasApiKey) {
-      return (
-          <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center font-sans text-gray-900 p-4">
-             <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
-                 <div className="flex justify-center items-center gap-2 mb-8">
-                    <div className="bg-arch-900 text-white p-3 rounded-xl">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                    </div>
-                 </div>
-                 <h1 className="text-4xl font-serif font-bold text-gray-900">
-                    Welcome to Archi<span className="text-accent">Craft</span>
-                 </h1>
-                 <p className="text-gray-500 text-lg">
-                    AI-Powered Architectural & Interior Design Concepts.
-                 </p>
-                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-left animate-fade-in-up">
-                    <h3 className="font-bold text-gray-900 mb-2">Requires Gemini API Key</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        To generate professional renders using <strong>Gemini 3 Pro Image</strong>, you must connect a Google Cloud Project with billing enabled.
-                    </p>
-                    <button 
-                        onClick={handleSelectKey}
-                        className="w-full bg-arch-900 text-white font-bold py-3 px-4 rounded-lg hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-                    >
-                        <span>Connect API Key</span>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                    </button>
-                    <p className="text-xs text-center text-gray-400 mt-4">
-                        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">
-                            Read about API billing
-                        </a>
-                    </p>
-                 </div>
-             </div>
-          </div>
-      );
-  }
 
   return (
     <AuthGate>
@@ -612,14 +557,12 @@ const App: React.FC = () => {
                           data={state.result as DesignResponse} 
                           originalImage={state.previewUrl!} 
                           onReset={handleReset}
-                          onChangeKey={handleSelectKey}
                       />
                   ) : (
                       <ConceptDashboard 
                           data={state.result as ConceptResponse}
                           unitSystem={state.unitSystem}
                           onReset={handleReset}
-                          onChangeKey={handleSelectKey}
                       />
                   )}
               </>

@@ -1,6 +1,13 @@
 node_modules
 dist
 .env
+.env.*
+ERROR
+logs
+*.log
+tests
+.pytest_cache
+.venv
 .DS_Store
 .git
 __pycache__

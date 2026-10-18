@@ -10,10 +10,9 @@ interface DashboardProps {
   data: DesignResponse;
   originalImage: string;
   onReset: () => void;
-  onChangeKey: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onReset, onChangeKey }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onReset }) => {
   const [activeTab, setActiveTab] = useState<'visual' | 'render'>('visual');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -54,12 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onRes
 
     } catch (err: any) {
       console.error(err);
-      const errStr = JSON.stringify(err);
-      if (errStr.includes('403') || errStr.includes('PERMISSION_DENIED') || err.message?.includes('403')) {
-          setError("PERMISSION_DENIED");
-      } else {
-          setError("Failed to generate interior visualization. Please try again.");
-      }
+      setError(err instanceof Error ? err.message : "Failed to generate interior visualization. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -156,17 +150,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, originalImage, onRes
                                 </>
                             )}
                         </button>
-                        {error === "PERMISSION_DENIED" ? (
-                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-center">
-                                <p className="text-xs text-red-600 mb-2 font-medium">Access Denied: Paid API Key Required</p>
-                                <p className="text-xs text-gray-600 mb-3">The model "Gemini 3 Pro Image" requires a Google Cloud project with billing enabled.</p>
-                                <button onClick={onChangeKey} className="text-xs bg-white border border-gray-300 px-3 py-1 rounded shadow-sm hover:bg-gray-50 text-gray-700">
-                                    Switch API Key
-                                </button>
-                            </div>
-                        ) : (
-                            error && <p className="text-xs text-red-500 mt-2 text-center">{error}</p>
-                        )}
+                        {error && <p className="text-xs text-red-500 mt-2 text-center">{error}</p>}
                     </div>
                 </div>
             </div>

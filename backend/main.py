@@ -2,25 +2,27 @@ import os
 import secrets
 import time
 import logging
+from pathlib import Path
 from fastapi import FastAPI, Depends, Request, Response, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from backend.auth import get_current_session, refresh_session_cookie, create_session_token, SESSION_COOKIE_NAME
+from backend.auth import get_current_session, refresh_session_cookie, create_session_token, SESSION_COOKIE_NAME, signing_key
 from backend.email_dispatcher import send_otp_email, mask_email
+from backend.gemini import generate_content
+from backend.security_config import read_secret, SecretConfigurationError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 
-if not APP_PASSWORD:
+if not os.environ.get("APP_PASSWORD"):
     logger.critical("APP_PASSWORD is not set!")
 if not ADMIN_EMAIL:
     logger.critical("ADMIN_EMAIL is not set!")
@@ -33,13 +35,17 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"detail": "Invalid request"})
+
+
+@app.middleware("http")
+async def no_store_api_responses(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 class PasswordRequest(BaseModel):
@@ -52,15 +58,25 @@ class OTPRequest(BaseModel):
 @app.post("/api/verify-access")
 @limiter.limit("5/minute")
 async def verify_access(request: Request, data: PasswordRequest):
-    if not APP_PASSWORD or data.password != APP_PASSWORD:
+    try:
+        app_password = read_secret("APP_PASSWORD", minimum_length=12)
+        signing_key()
+        if not ADMIN_EMAIL:
+            raise SecretConfigurationError("Missing administrator")
+    except SecretConfigurationError:
+        raise HTTPException(status_code=503, detail="Authentication configuration must be updated") from None
+    if not secrets.compare_digest(data.password.encode(), app_password.encode()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
 
     otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
-    otp_store[get_remote_address(request)] = {
+    ip = get_remote_address(request)
+    otp_store.pop(ip, None)
+    if not await send_otp_email(ADMIN_EMAIL, otp_code):
+        raise HTTPException(status_code=503, detail="Verification email could not be delivered. Please try again.")
+    otp_store[ip] = {
         "otp": otp_code,
         "expires_at": time.time() + 300,
     }
-    await send_otp_email(ADMIN_EMAIL, otp_code)
     return {"message": "OTP sent", "email": mask_email(ADMIN_EMAIL)}
 
 
@@ -102,13 +118,29 @@ async def check_auth(request: Request, response: Response, payload: dict = Depen
 @app.post("/api/logout")
 async def logout(response: Response):
     response.delete_cookie(key=SESSION_COOKIE_NAME, httponly=True, samesite="strict")
+    response.delete_cookie(key="archicraft_session_v3", httponly=True, samesite="strict")
     return {"message": "Logged out"}
 
 
-# ── Static frontend ────────────────────────────────────────────────
-DIST = os.path.join(os.path.dirname(__file__), "../frontend_dist")
+@app.post("/api/gemini/generate")
+@limiter.limit("6/minute")
+async def generate(request: Request, response: Response, payload: dict = Depends(get_current_session)):
+    result = await generate_content(request)
+    refresh_session_cookie(request, response, payload)
+    return result
 
-if os.path.isdir(DIST):
+
+# ── Static frontend ────────────────────────────────────────────────
+DIST = Path(__file__).resolve().parent.parent / "frontend_dist"
+
+
+def frontend_path(full_path: str) -> Path:
+    candidate = (DIST / full_path).resolve()
+    if not candidate.is_relative_to(DIST.resolve()):
+        raise HTTPException(status_code=404)
+    return candidate
+
+if DIST.is_dir():
     _assets = os.path.join(DIST, "assets")
     if os.path.isdir(_assets):
         app.mount("/assets", StaticFiles(directory=_assets), name="assets")
@@ -118,8 +150,8 @@ if os.path.isdir(DIST):
         # Never catch /api routes here
         if full_path.startswith("api"):
             raise HTTPException(status_code=404)
-        candidate = os.path.join(DIST, full_path)
-        if os.path.isfile(candidate):
+        candidate = frontend_path(full_path)
+        if candidate.is_file():
             return FileResponse(candidate)
         resp = FileResponse(os.path.join(DIST, "index.html"))
         resp.headers["Cache-Control"] = "no-store"

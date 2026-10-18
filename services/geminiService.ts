@@ -1,9 +1,9 @@
 
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { Type, type Schema } from "@google/genai";
+import { generateContent } from './geminiTransport';
 import { DesignStyle, DesignResponse, ConceptInputData, ConceptResponse, UnitSystem } from "../types";
 
-// Note: We instantiate GoogleGenAI inside each function to ensure it picks up the 
-// latest API key if the user selects one during the session.
+// Provider credentials are read only by the authenticated backend.
 
 const SYSTEM_INSTRUCTION_A = `
 You are a world-class Interior Architect and Spatial Planner powered by Google Gemini.
@@ -25,7 +25,6 @@ export const analyzeFloorPlan = async (
   style: DesignStyle,
   unitSystem: UnitSystem
 ): Promise<DesignResponse> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   // OPTIMIZATION: Using Flash for faster JSON/Text analysis. 
   // It handles multimodal inputs efficiently.
@@ -45,7 +44,7 @@ export const analyzeFloorPlan = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContent({
       model: modelId,
       contents: {
         parts: [
@@ -156,7 +155,6 @@ export const generateArchitecturalConcept = async (
   inputs: ConceptInputData,
   unitSystem: UnitSystem
 ): Promise<ConceptResponse> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   // OPTIMIZATION: Using Flash for faster Generation.
   // Gemini 2.5 Flash is highly capable of following JSON schemas and is much faster than 3 Pro Preview.
@@ -288,7 +286,7 @@ export const generateArchitecturalConcept = async (
   };
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContent({
       model: modelId,
       contents: { text: prompt },
       config: {
@@ -316,7 +314,6 @@ export const generateArchitecturalConcept = async (
 export const generateCadDrawing = async (
     schematicBase64: string,
 ): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     // Use Gemini 3 Pro Image (Nano Banana Pro 3) for high-quality generation
     const modelId = "gemini-3-pro-image-preview";
 
@@ -339,7 +336,7 @@ export const generateCadDrawing = async (
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await generateContent({
             model: modelId,
             contents: {
                 parts: [
@@ -365,7 +362,6 @@ export const generateInteriorPreview = async (
   schematicBase64: string,
   styleDescription: string = "Modern minimalist"
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   // Using Nano Banana Pro 3 (Gemini 3 Pro Image) for high-quality visualization
   const modelId = "gemini-3-pro-image-preview";
 
@@ -384,7 +380,7 @@ export const generateInteriorPreview = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContent({
       model: modelId,
       contents: {
         parts: [

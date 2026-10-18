@@ -10,10 +10,9 @@ interface ConceptDashboardProps {
   data: ConceptResponse;
   unitSystem: UnitSystem;
   onReset: () => void;
-  onChangeKey: () => void;
 }
 
-export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSystem, onReset, onChangeKey }) => {
+export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSystem, onReset }) => {
   // We no longer toggle between "Layout Diagram" (SVG) and "Room Schedule".
   // The User only sees the "CAD Drawing" (Image) and "Room Schedule".
   const [activeTab, setActiveTab] = useState<'cad' | 'interior' | 'list'>('cad');
@@ -89,12 +88,7 @@ export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSy
 
         } catch (err: any) {
             console.error(err);
-             const errStr = JSON.stringify(err);
-            if (errStr.includes('403') || errStr.includes('PERMISSION_DENIED') || err.message?.includes('403')) {
-                setCadError("PERMISSION_DENIED");
-            } else {
-                setCadError("Failed to generate architectural drawing. Please try resetting.");
-            }
+            setCadError(err instanceof Error ? err.message : "Failed to generate architectural drawing. Please try resetting.");
         } finally {
             setIsGeneratingCad(false);
         }
@@ -146,12 +140,7 @@ export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSy
 
     } catch (err: any) {
         console.error(err);
-        const errStr = JSON.stringify(err);
-        if (errStr.includes('403') || errStr.includes('PERMISSION_DENIED') || err.message?.includes('403')) {
-            setInteriorError("PERMISSION_DENIED");
-        } else {
-            setInteriorError("Failed to generate interior visualization. Please try again.");
-        }
+        setInteriorError(err instanceof Error ? err.message : "Failed to generate interior visualization. Please try again.");
     } finally {
         setIsGeneratingInterior(false);
     }
@@ -270,16 +259,7 @@ export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSy
                              <p className="text-xs text-orange-500 mt-2 text-center animate-pulse">Wait for floor plan generation...</p>
                         )}
 
-                        {interiorError === "PERMISSION_DENIED" ? (
-                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-center">
-                                <p className="text-xs text-red-600 mb-2 font-medium">Access Denied: Paid API Key Required</p>
-                                <button onClick={onChangeKey} className="text-xs bg-white border border-gray-300 px-3 py-1 rounded shadow-sm hover:bg-gray-50 text-gray-700">
-                                    Switch API Key
-                                </button>
-                            </div>
-                        ) : (
-                            interiorError && <p className="text-xs text-red-500 mt-2 text-center">{interiorError}</p>
-                        )}
+                        {interiorError && <p className="text-xs text-red-500 mt-2 text-center">{interiorError}</p>}
                     </div>
                 </div>
             </div>
@@ -327,10 +307,7 @@ export const ConceptDashboard: React.FC<ConceptDashboardProps> = ({ data, unitSy
                             </div>
                         ) : (
                             <div className="bg-red-50 p-8 rounded-xl text-center text-red-600">
-                                <p>Failed to generate floor plan drawing.</p>
-                                {cadError === "PERMISSION_DENIED" && (
-                                    <button onClick={onChangeKey} className="mt-4 underline text-sm">Check API Key Billing</button>
-                                )}
+                                <p>{cadError || 'Failed to generate floor plan drawing.'}</p>
                             </div>
                         )}
                         
